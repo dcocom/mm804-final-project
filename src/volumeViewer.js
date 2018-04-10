@@ -8,40 +8,7 @@ import vtkImageSlice from 'vtk.js/Sources/Rendering/Core/ImageSlice';
 import controlPanel from './controlPanel.html';
 import vtkXMLImageDataReader from "vtk.js/Sources/IO/XML/XMLImageDataReader/index";
 
-const fullScreenRenderWindow = vtkFullScreenRenderWindow.newInstance({
-    background: [0, 0, 0],
-});
-const renderWindow = fullScreenRenderWindow.getRenderWindow();
-const renderer = fullScreenRenderWindow.getRenderer();
-fullScreenRenderWindow.addController(controlPanel);
 
-const imageActorI = vtkImageSlice.newInstance();
-const imageActorJ = vtkImageSlice.newInstance();
-const imageActorK = vtkImageSlice.newInstance();
-
-renderer.addActor(imageActorK);
-renderer.addActor(imageActorJ);
-renderer.addActor(imageActorI);
-
-function updateColorLevel(e) {
-    const colorLevel = Number(
-        (e ? e.target : document.querySelector('.colorLevel')).value
-    );
-    imageActorI.getProperty().setColorLevel(colorLevel);
-    imageActorJ.getProperty().setColorLevel(colorLevel);
-    imageActorK.getProperty().setColorLevel(colorLevel);
-    renderWindow.render();
-}
-
-function updateColorWindow(e) {
-    const colorLevel = Number(
-        (e ? e.target : document.querySelector('.colorWindow')).value
-    );
-    imageActorI.getProperty().setColorWindow(colorLevel);
-    imageActorJ.getProperty().setColorWindow(colorLevel);
-    imageActorK.getProperty().setColorWindow(colorLevel);
-    renderWindow.render();
-}
 
 const vtiReader = vtkXMLImageDataReader.newInstance();
 let input = document.getElementById('file-reader');
@@ -57,8 +24,42 @@ input.onchange = function (evt) {
 };
 
 
-
 function displayVolume(fileContent){
+    const fullScreenRenderWindow = vtkFullScreenRenderWindow.newInstance({
+        background: [0, 0, 0],
+    });
+    const renderWindow = fullScreenRenderWindow.getRenderWindow();
+    const renderer = fullScreenRenderWindow.getRenderer();
+    fullScreenRenderWindow.addController(controlPanel);
+
+    const imageActorI = vtkImageSlice.newInstance();
+    const imageActorJ = vtkImageSlice.newInstance();
+    const imageActorK = vtkImageSlice.newInstance();
+
+    renderer.addActor(imageActorK);
+    renderer.addActor(imageActorJ);
+    renderer.addActor(imageActorI);
+
+    function updateColorLevel(e) {
+        const colorLevel = Number(
+            (e ? e.target : document.querySelector('.colorLevel')).value
+        );
+        imageActorI.getProperty().setColorLevel(colorLevel);
+        imageActorJ.getProperty().setColorLevel(colorLevel);
+        imageActorK.getProperty().setColorLevel(colorLevel);
+        renderWindow.render();
+    }
+
+    function updateColorWindow(e) {
+        const colorLevel = Number(
+            (e ? e.target : document.querySelector('.colorWindow')).value
+        );
+        imageActorI.getProperty().setColorWindow(colorLevel);
+        imageActorJ.getProperty().setColorWindow(colorLevel);
+        imageActorK.getProperty().setColorWindow(colorLevel);
+        renderWindow.render();
+    }
+
     vtiReader.parseAsArrayBuffer(fileContent);
     const data = vtiReader.getOutputData();
     const dataRange = data
@@ -102,31 +103,32 @@ function displayVolume(fileContent){
         .setAttribute('value', (dataRange[0] + dataRange[1]) / 2);
     updateColorLevel();
     updateColorWindow();
+
+    document.querySelector('.sliceI').addEventListener('input', (e) => {
+        imageActorI.getMapper().setISlice(Number(e.target.value));
+        renderWindow.render();
+    });
+
+    document.querySelector('.sliceJ').addEventListener('input', (e) => {
+        imageActorJ.getMapper().setJSlice(Number(e.target.value));
+        renderWindow.render();
+    });
+
+    document.querySelector('.sliceK').addEventListener('input', (e) => {
+        imageActorK.getMapper().setKSlice(Number(e.target.value));
+        renderWindow.render();
+    });
+
+    document
+        .querySelector('.colorLevel')
+        .addEventListener('input', updateColorLevel);
+    document
+        .querySelector('.colorWindow')
+        .addEventListener('input', updateColorWindow);
+
+    global.fullScreen = fullScreenRenderWindow;
+    global.imageActorI = imageActorI;
+    global.imageActorJ = imageActorJ;
+    global.imageActorK = imageActorK;
 }
 
-document.querySelector('.sliceI').addEventListener('input', (e) => {
-    imageActorI.getMapper().setISlice(Number(e.target.value));
-    renderWindow.render();
-});
-
-document.querySelector('.sliceJ').addEventListener('input', (e) => {
-    imageActorJ.getMapper().setJSlice(Number(e.target.value));
-    renderWindow.render();
-});
-
-document.querySelector('.sliceK').addEventListener('input', (e) => {
-    imageActorK.getMapper().setKSlice(Number(e.target.value));
-    renderWindow.render();
-});
-
-document
-    .querySelector('.colorLevel')
-    .addEventListener('input', updateColorLevel);
-document
-    .querySelector('.colorWindow')
-    .addEventListener('input', updateColorWindow);
-
-global.fullScreen = fullScreenRenderWindow;
-global.imageActorI = imageActorI;
-global.imageActorJ = imageActorJ;
-global.imageActorK = imageActorK;

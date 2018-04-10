@@ -9,7 +9,8 @@ const outputPath = path.join(__dirname, './dist');
 module.exports = {
     entry: {
         'main': path.join(__dirname, './src/index.js'),
-        'volumeViewer': path.join(__dirname, './src/volumeViewer.js')
+        'volumeViewer': path.join(__dirname, './src/volumeViewer.js'),
+        'style': path.join(__dirname, './src/style.js')
     },
     output: {
         filename: '[name].js',
@@ -27,4 +28,11 @@ module.exports = {
             sourcePath,
         ],
     },
+    plugins: [
+        new webpack.ProvidePlugin({
+            $: "jquery",
+            jQuery: "jquery"
+        })
+    ],
+    mode: 'development'
 };
