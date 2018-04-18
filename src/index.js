@@ -16,13 +16,15 @@ import vtkColorMaps from 'vtk.js/Sources/Rendering/Core/ColorTransferFunction/Co
 
 import controlPanel from './controller.html';
 import controlPanel2 from './controlPanel.html';
+import controlPanel3 from './2DcontrolPanel.html';
 import vtkOpenGLRenderWindow from "vtk.js/Sources/Rendering/OpenGL/RenderWindow/index";
 import vtkRenderWindow from "vtk.js/Sources/Rendering/Core/RenderWindow/index";
 import vtkRenderer from "vtk.js/Sources/Rendering/Core/Renderer/index";
 import vtkRenderWindowInteractor from "vtk.js/Sources/Rendering/Core/RenderWindowInteractor/index";
+import vtkInteractorStyleImage from "vtk.js/Sources/Interaction/Style/InteractorStyleImage/index";
+import vtkImageCroppingRegionsWidget from "vtk.js/Sources/Interaction/Widgets/ImageCroppingRegionsWidget/index";
 
 const backgroundColor = [0.054, 0.145, 0.176];
-const vtiReader = vtkXMLImageDataReader.newInstance();
 const rootContainer = document.querySelector('#main-container');
 let containerStyle = {
     position: 'relative',
@@ -33,6 +35,7 @@ let containerStyle = {
     overflow: 'hidden',
 };
 
+const vtiReader = vtkXMLImageDataReader.newInstance();
 let input = document.getElementById('file-reader');
 let buttonRender = document.getElementById('btn-render');
 buttonRender.onclick = function () {
@@ -273,7 +276,6 @@ function renderSliceImage() {
     global.imageActorJ = imageActorJ;
     global.imageActorK = imageActorK;
 }
-
 
 function renderVolumeColorTransformation() {
     const container = document.querySelector('#main-container');
@@ -558,8 +560,151 @@ function renderVolumeColorTransformation() {
     renderWindow.render();
 }
 
+function render2DSlicedImage() {
+    const fullScreenRenderer = vtkFullScreenRenderWindow.newInstance({
+        background: backgroundColor,
+        rootContainer,
+        containerStyle
+    });
+    const renderer = fullScreenRenderer.getRenderer();
+    const renderWindow = fullScreenRenderer.getRenderWindow();
+    const interactorStyle2D = vtkInteractorStyleImage.newInstance();
+    fullScreenRenderer.addController(controlPanel3);
+    renderWindow.getInteractor().setInteractorStyle(interactorStyle2D);
+    renderer.getActiveCamera().setParallelProjection(true);
+
+// set the current image number to the first image
+    interactorStyle2D.setCurrentImageNumber(0);
+
+// ----------------------------------------------------------------------------
+// Helper methods for setting up control panel
+// ----------------------------------------------------------------------------
+
+    function setupControlPanel(data, imageMapper) {
+        const sliceInputs = [
+            document.querySelector('.sliceI'),
+            document.querySelector('.sliceJ'),
+            document.querySelector('.sliceK'),
+        ];
+        const viewAxisInput = document.querySelector('.viewAxis');
+
+        const extent = data.getExtent();
+        sliceInputs.forEach((el, idx) => {
+            const lowerExtent = extent[idx * 2];
+            const upperExtent = extent[idx * 2 + 1];
+            el.setAttribute('min', lowerExtent);
+            el.setAttribute('max', upperExtent);
+            el.setAttribute('value', (upperExtent - lowerExtent) / 2);
+        });
+
+        viewAxisInput.value = 'IJKXYZ'[imageMapper.getSlicingMode()];
+
+        sliceInputs.forEach((el, idx) => {
+            el.addEventListener('input', (ev) => {
+                const sliceMode = sliceInputs.indexOf(el);
+                if (imageMapper.getSlicingMode() === sliceMode) {
+                    imageMapper.setSlice(Number(ev.target.value));
+                    renderWindow.render();
+                }
+            });
+        });
+
+        viewAxisInput.addEventListener('input', (ev) => {
+            const sliceMode = 'IJKXYZ'.indexOf(ev.target.value);
+            imageMapper.setSlicingMode(sliceMode);
+            const slice = sliceInputs[sliceMode].value;
+            imageMapper.setSlice(slice);
+
+            const camPosition = renderer
+                .getActiveCamera()
+                .getFocalPoint()
+                .map((v, idx) => (idx === sliceMode ? v + 1 : v));
+            const viewUp = [0, 0, 0];
+            viewUp[(sliceMode + 2) % 3] = 1;
+            renderer.getActiveCamera().set({position: camPosition, viewUp});
+            renderer.resetCamera();
+
+            renderWindow.render();
+        });
+    }
+
+// ----------------------------------------------------------------------------
+// Create widget
+// ----------------------------------------------------------------------------
+    const widget = vtkImageCroppingRegionsWidget.newInstance();
+    widget.setInteractor(renderWindow.getInteractor());
+
+// Demonstrate cropping planes event update
+    widget.onCroppingPlanesPositionChanged(() => {
+        console.log('planes changed:', widget.getWidgetRep().getPlanePositions());
+    });
+
+// called when the volume is loaded
+    function setupWidget(volumeMapper, imageMapper) {
+        widget.setVolumeMapper(volumeMapper);
+        widget.setHandleSize(10); // in pixels
+        widget.setEnabled(true);
+
+        // getWidgetRep() returns a widget AFTER setEnabled(true).
+
+        // Demonstrate widget representation APIs
+        widget.getWidgetRep().setOpacity(0.8);
+        widget.getWidgetRep().setEdgeColor(0.0, 0.0, 1.0);
+
+        imageMapper.onModified(() => {
+            // update slice and slice orientation
+            const sliceMode = imageMapper.getSlicingMode();
+            const slice = imageMapper.getSlice();
+            widget.setSlice(slice);
+            widget.setSliceOrientation(sliceMode);
+        });
+
+        renderWindow.render();
+    }
+
+// ----------------------------------------------------------------------------
+// Set up volume
+// ----------------------------------------------------------------------------
+    const volumeMapper = vtkVolumeMapper.newInstance();
+    const imageMapper = vtkImageMapper.newInstance();
+    const actor = vtkImageSlice.newInstance();
+    actor.setMapper(imageMapper);
+    renderer.addViewProp(actor);
+
+    const data = vtiReader.getOutputData();
+    // NOTE we don't care about image direction here
+    data.setDirection(1, 0, 0, 0, 1, 0, 0, 0, 1);
+
+    volumeMapper.setInputData(data);
+    imageMapper.setInputData(data);
+
+    // create our cropping widget
+    setupWidget(volumeMapper, imageMapper);
+
+    // After creating our cropping widget, we can now update our image mapper
+    // with default slice orientation/mode and camera view.
+    const sliceMode = vtkImageMapper.SlicingMode.K;
+    const viewUp = [0, 1, 0];
+
+    imageMapper.setSlicingMode(sliceMode);
+    imageMapper.setSlice(0);
+
+    const camPosition = renderer
+        .getActiveCamera()
+        .getFocalPoint()
+        .map((v, idx) => (idx === sliceMode ? v + 1 : v));
+    renderer.getActiveCamera().set({position: camPosition, viewUp});
+
+    // setup control panel
+    setupControlPanel(data, imageMapper);
+
+    renderer.resetCamera();
+    renderWindow.render();
+};
+
 
 $('#volume-contour').on('click', renderVolumeContour);
 $('#sliced-image').on('click', renderSliceImage);
 $('#render-volume').on('click', renderVolume);
 $('#color-transform').on('click', renderVolumeColorTransformation);
+$('#2d-sliced-image').on('click', render2DSlicedImage);

@@ -3,3 +3,5 @@ package-lock.json
 yarn-error.log
 .DS_Store
 .idea/
+dist/.DS_Store
+dist/data/.DS_Store
