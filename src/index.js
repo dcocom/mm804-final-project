@@ -35,6 +35,9 @@ let containerStyle = {
     overflow: 'hidden',
 };
 
+// a vti data reader which is an instances of the xmlimagedatareader 
+//used as single reader compnent for the features
+
 const vtiReader = vtkXMLImageDataReader.newInstance();
 let input = document.getElementById('file-reader');
 let buttonRender = document.getElementById('btn-render');
@@ -50,6 +53,8 @@ buttonRender.onclick = function () {
     fileReader.readAsArrayBuffer(files);
 };
 
+//a function used to ead any volume file in vti format
+//this file used throught scope for testing all the features
 function renderVolume() {
     const fullScreenRenderer = vtkFullScreenRenderWindow.newInstance({
         background: backgroundColor,
@@ -166,7 +171,7 @@ function renderVolumeContour() {
     renderWindow.render();
     global.marchingCube = marchingCube;
 }
-
+//function implimentation of render slice feature
 function renderSliceImage() {
     const fullScreenRenderWindow = vtkFullScreenRenderWindow.newInstance({
         background: backgroundColor,
@@ -195,7 +200,8 @@ function renderSliceImage() {
         imageActorK.getProperty().setColorLevel(colorLevel);
         renderWindow.render();
     }
-
+    
+    ///update the color window function
     function updateColorWindow(e) {
         const colorLevel = Number(
             (e ? e.target : document.querySelector('.colorWindow')).value
@@ -277,6 +283,7 @@ function renderSliceImage() {
     global.imageActorK = imageActorK;
 }
 
+//function to do transfer function features
 function renderVolumeColorTransformation() {
     const container = document.querySelector('#main-container');
     const renderWindowContainer = document.createElement('div');
@@ -559,7 +566,7 @@ function renderVolumeColorTransformation() {
 
     renderWindow.render();
 }
-
+//function rendering the 2d slice
 function render2DSlicedImage() {
     const fullScreenRenderer = vtkFullScreenRenderWindow.newInstance({
         background: backgroundColor,
