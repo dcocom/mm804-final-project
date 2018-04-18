@@ -29,12 +29,6 @@ Note: Since all the files and code file are all in the same folder, it would be 
 
 Things included:
 
-    1. Assignment3.pdf
-    
-    2. MM804-Assignment 3.py
-		
-    3. MM804-Assignment 3.ipynb
-    
-    4. Assignment3_Screenshoot.jpeg
-    
-    5. CTDATA- DICOM 
+    1. dist folder
+    2. src folder- Includes the main index.js file along with all the necessary control panels
+    3. vti files- for testing
