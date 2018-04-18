@@ -12,7 +12,8 @@ The following tools were used to develop this program.
     
     2. Application must be build and compiled from command line using Npm. 
        Command
-       1) npm build all
+       1) npm install
+       1) npm run build
        2) npm start
     
    
